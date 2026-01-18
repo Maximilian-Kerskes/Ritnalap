@@ -92,10 +92,10 @@ class Controller {
 	}
 
 	public ButtonStates getButtonState() {
-		if (ledButton.isUp()) {
+		if (ledButton.isDown()) {
 			try {
 				Thread.sleep(200);
-				if (!ledButton.isUp()) {
+				if (!ledButton.isDown()) {
 					return ButtonStates.SINGLE_PRESS;
 				} else {
 					return ButtonStates.DOUBLE_PRESS;
