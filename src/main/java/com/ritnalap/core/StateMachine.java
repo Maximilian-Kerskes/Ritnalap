@@ -49,7 +49,7 @@ public class StateMachine {
 					state = StateMachineStates.SENSING;
 				} else if (buttonState == ButtonStates.DOUBLE_PRESS) {
 					System.out.println("currently in alarm");
-					System.out.println("move into sense");
+					System.out.println("move into idle");
 					controller.moveIntoIdle();
 					state = StateMachineStates.IDLE;
 				}
