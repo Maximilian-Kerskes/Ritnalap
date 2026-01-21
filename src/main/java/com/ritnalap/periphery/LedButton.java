@@ -48,7 +48,7 @@ public class LedButton {
 				.name("Button" + iPinLed)
 				.address(PIN_Button)
 				.pull(PullResistance.PULL_DOWN)
-				.debounce(100L)
+				.debounce(300L)
 				.provider("pigpio-digital-input");
 
 		button = pi4j.create(buttonConfig);
