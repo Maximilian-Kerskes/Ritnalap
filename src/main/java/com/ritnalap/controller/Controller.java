@@ -9,12 +9,16 @@ import com.ritnalap.periphery.LedButton;
 import com.ritnalap.periphery.MotionSensor;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Controller {
 	private final LedButton ledButton;
 	private final long DOUBLE_PRESS_MS = 500;
 	private long lastPressTime = 0;
 	private boolean firstPressDetected = false;
+	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
 	private final Buzzer buzzer;
 	private final Lcd lcd;
@@ -51,6 +55,12 @@ public class Controller {
 		lcd.writeLine(now.format(timeFormatter), 1);
 	}
 
+	public void displayCounter(String text) {
+		lcd.clearText();
+                lcd.writeLine("Ritnalap", 0);
+                lcd.writeLine(text, 1);
+	}
+
 	public ButtonStates getButtonState() {
 		long now = System.currentTimeMillis();
 		if (ledButton.isDown()) {
@@ -74,10 +84,8 @@ public class Controller {
 
 	public MotionSensorStates getMotionSensorState() {
 		if (motionSensor.isUp()) {
-			System.out.println("Currently up");
 			return MotionSensorStates.MOTION;
 		} else {
-			System.out.println("Currently down");
 			return MotionSensorStates.NO_MOTION;
 		}
 	}
@@ -88,15 +96,24 @@ public class Controller {
 		turnOffLed();
 	}
 
-	public void moveIntoSense() {
-		displaySense();
-		turnOnLed();
-		try {
-			Thread.sleep(5000);
+	public void startCountdown(int seconds, Runnable onFinished) {
+		final int[] counter = {seconds};
+	
+		scheduler.scheduleAtFixedRate(() -> {
+			if (counter[0] >= 0) {
+				displayCounter(String.valueOf(counter[0]));
+			}
+			else {
+				onFinished.run();
+			}
+		}, 0, 1, TimeUnit.SECONDS);
+	}
 
-		} catch (InterruptedException e) {
-			System.out.println(e.getMessage());
-		}
+	public void moveIntoSense() {
+		startCountdown(5, () -> {
+			displaySense();
+		});
+		turnOnLed();
 	}
 
 	public void moveIntoAlarm() {
