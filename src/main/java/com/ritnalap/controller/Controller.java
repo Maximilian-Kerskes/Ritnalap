@@ -9,16 +9,13 @@ import com.ritnalap.periphery.LedButton;
 import com.ritnalap.periphery.MotionSensor;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class Controller {
 	private final LedButton ledButton;
-	private final long DOUBLE_PRESS_MS = 500;
+	private boolean lastButtonDown = false;
 	private long lastPressTime = 0;
-	private boolean firstPressDetected = false;
-	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+	private boolean waitingSecondPress = false;
+	private final long DOUBLE_PRESS_MS = 500;
 
 	private final Buzzer buzzer;
 	private final Lcd lcd;
@@ -57,28 +54,34 @@ public class Controller {
 
 	public void displayCounter(String text) {
 		lcd.clearText();
-                lcd.writeLine("Ritnalap", 0);
-                lcd.writeLine(text, 1);
+		lcd.writeLine("Ritnalap", 0);
+		lcd.writeLine(text, 1);
 	}
 
 	public ButtonStates getButtonState() {
+		boolean down = ledButton.isDown();
 		long now = System.currentTimeMillis();
-		if (ledButton.isDown()) {
 
-			if (firstPressDetected && (now - lastPressTime <= DOUBLE_PRESS_MS)) {
-				firstPressDetected = false;
+		if (down && !lastButtonDown) {
+			if (waitingSecondPress && (now - lastPressTime <= DOUBLE_PRESS_MS)) {
+				waitingSecondPress = false;
+				lastPressTime = 0;
+				lastButtonDown = down;
 				return ButtonStates.DOUBLE_PRESS;
 			} else {
-				firstPressDetected = true;
+				waitingSecondPress = true;
 				lastPressTime = now;
-				return null;
 			}
 		}
 
-		if (firstPressDetected && (now - lastPressTime > DOUBLE_PRESS_MS)) {
-			firstPressDetected = false;
+		if (!down && waitingSecondPress && (now - lastPressTime > DOUBLE_PRESS_MS)) {
+			waitingSecondPress = false;
+			lastPressTime = 0;
+			lastButtonDown = down;
 			return ButtonStates.SINGLE_PRESS;
 		}
+
+		lastButtonDown = down;
 		return ButtonStates.RELEASED;
 	}
 
@@ -96,23 +99,16 @@ public class Controller {
 		turnOffLed();
 	}
 
-	public void startCountdown(int seconds, Runnable onFinished) {
-		final int[] counter = {seconds};
-	
-		scheduler.scheduleAtFixedRate(() -> {
-			if (counter[0] >= 0) {
-				displayCounter(String.valueOf(counter[0]));
-			}
-			else {
-				onFinished.run();
-			}
-		}, 0, 1, TimeUnit.SECONDS);
-	}
-
 	public void moveIntoSense() {
-		startCountdown(5, () -> {
-			displaySense();
-		});
+		try {
+			for (int i = 5; i >= 0; i--) {
+				displayCounter(String.valueOf(i));
+				Thread.sleep(1000); // wait 1 second
+			}
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		displaySense();
 		turnOnLed();
 	}
 
